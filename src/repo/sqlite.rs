@@ -149,6 +149,11 @@ impl SqliteRepo {
         }
         // remember primary key of the event most recently inserted.
         let ev_id = tx.last_insert_rowid();
+        // insert into full-text search index for NIP-50
+        tx.execute(
+            "INSERT INTO event_fts(rowid, content) VALUES (?1, ?2)",
+            params![ev_id, e.content],
+        )?;
         // add all tags to the tag table
         for tag in &e.tags {
             // ensure we have 2 values.
@@ -1135,6 +1140,12 @@ fn query_from_filter(f: &ReqFilter) -> (String, Vec<Box<dyn ToSql>>, Option<Stri
     if f.until.is_some() {
         let until_clause = format!("created_at <= {}", f.until.unwrap());
         filter_components.push(until_clause);
+    }
+    // NIP-50: full-text search
+    if let Some(ref search_term) = f.search {
+        filter_components
+            .push("e.id IN (SELECT rowid FROM event_fts WHERE event_fts MATCH ?)".to_string());
+        params.push(Box::new(search_term.clone()));
     }
     // never display hidden events
     query.push_str(" WHERE hidden!=TRUE");

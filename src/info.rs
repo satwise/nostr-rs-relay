@@ -71,6 +71,9 @@ impl From<Settings> for RelayInfo {
         if c.authorization.nip42_auth {
             supported_nips.push(42);
         }
+        if c.search.enabled {
+            supported_nips.push(50);
+        }
         if c.negentropy.enabled {
             supported_nips.push(77);
         }

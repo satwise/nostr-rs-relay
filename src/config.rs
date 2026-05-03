@@ -179,6 +179,12 @@ pub struct Negentropy {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(unused)]
+pub struct Search {
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(unused)]
 pub struct Logging {
     pub folder_path: Option<String>,
     pub file_prefix: Option<String>,
@@ -200,6 +206,7 @@ pub struct Settings {
     pub options: Options,
     pub logging: Logging,
     pub negentropy: Negentropy,
+    pub search: Search,
 }
 
 impl Settings {
@@ -375,6 +382,7 @@ impl Default for Settings {
                 enabled: true,
                 max_sync_events: 500_000,
             },
+            search: Search { enabled: true },
         }
     }
 }
