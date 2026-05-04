@@ -13,6 +13,13 @@ mirrored on [GitHub](https://github.com/scsibug/nostr-rs-relay).
 
 ![Github CI](https://github.com/scsibug/nostr-rs-relay/actions/workflows/ci.yml/badge.svg)
 
+## Architecture Runbook
+
+- Local: [`ARCHITECTURE-RUNBOOK.md`](ARCHITECTURE-RUNBOOK.md)
+- Umbrel packaging runbook: <https://github.com/satwise/umbrel-apps/blob/master/nostr-relay/ARCHITECTURE-RUNBOOK.md>
+- Non-Umbrel deployment/app runbook: <https://github.com/satwise/nostrrelay/blob/main/ARCHITECTURE-RUNBOOK.md>
+- Organization: <https://github.com/satwise>
+
 
 ## Features
 
