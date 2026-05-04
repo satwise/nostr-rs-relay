@@ -1023,6 +1023,13 @@ pub enum NostrMessage {
 
 /// Convert Message to `NostrMessage`
 fn convert_to_msg(msg: &str, max_bytes: Option<usize>) -> Result<NostrMessage> {
+    // Try NIP-77 negentropy messages before serde: NEG-CLOSE parses as CloseCmd
+    // (cmd="NEG-CLOSE") via serde and would be silently dropped as "invalid command".
+    if msg.contains("\"NEG-") {
+        if let Some(neg_msg) = crate::negentropy::parse_neg_message(msg) {
+            return Ok(NostrMessage::NegMsg(neg_msg));
+        }
+    }
     let parsed_res: Result<NostrMessage> =
         serde_json::from_str(msg).map_err(std::convert::Into::into);
     match parsed_res {
