@@ -55,6 +55,8 @@ pub struct ReqFilter {
     pub limit: Option<u64>,
     /// Set of tags
     pub tags: Option<HashMap<char, TagOperand>>,
+    /// NIP-50 full-text search query
+    pub search: Option<String>,
     /// Force no matches due to malformed data
     // we can't represent it in the req filter, so we don't want to
     // erroneously match.  This basically indicates the req tried to
@@ -85,8 +87,9 @@ impl Serialize for ReqFilter {
         }
         if let Some(authors) = &self.authors {
             map.serialize_entry("authors", &authors)?;
-        }
-        // serialize tags
+        }        if let Some(search) = &self.search {
+            map.serialize_entry("search", search)?
+        }        // serialize tags
         if let Some(tags) = &self.tags {
             for (k, v) in tags {
                 map.serialize_entry(&format!("#{k}"), v)?;
@@ -116,6 +119,7 @@ impl<'de> Deserialize<'de> for ReqFilter {
             authors: None,
             limit: None,
             tags: None,
+            search: None,
             force_no_match: false,
         };
         let empty_string = "".into();
@@ -142,6 +146,8 @@ impl<'de> Deserialize<'de> for ReqFilter {
                 rf.until = Deserialize::deserialize(val).ok();
             } else if key == "limit" {
                 rf.limit = Deserialize::deserialize(val).ok();
+            } else if key == "search" {
+                rf.search = Deserialize::deserialize(val).ok();
             } else if key == "authors" {
                 let raw_authors: Option<Vec<String>> = Deserialize::deserialize(val).ok();
                 if let Some(a) = raw_authors.as_ref() {

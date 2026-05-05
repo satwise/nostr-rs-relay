@@ -939,6 +939,7 @@ mod tests {
                 "84de35e2584d2b144aae823c9ed0b0f3deda09648530b93d1a2a146d1dea9864".to_owned(),
             ]),
             limit: None,
+            search: None,
             tags: Some(HashMap::from([(
                 'p',
                 TagOperand::Or(HashSet::from([
@@ -963,6 +964,7 @@ mod tests {
                 "84de35e2584d2b144aae823c9ed0b0f3deda09648530b93d1a2a146d1dea9864".to_owned(),
             ]),
             limit: None,
+            search: None,
             tags: Some(HashMap::from([(
                 'd',
                 TagOperand::Or(HashSet::from(["test".to_owned()])),
@@ -985,6 +987,7 @@ mod tests {
                 "84de35e2584d2b144aae823c9ed0b0f3deda09648530b93d1a2a146d1dea9864".to_owned(),
             ]),
             limit: None,
+            search: None,
             tags: Some(HashMap::from([(
                 'd',
                 TagOperand::And(HashSet::from([
@@ -1008,6 +1011,7 @@ mod tests {
             until: None,
             authors: None,
             limit: None,
+            search: None,
             tags: Some(HashMap::from([(
                 'd',
                 TagOperand::Or(HashSet::from([
@@ -1033,6 +1037,7 @@ mod tests {
                 "84de35e2584d2b144aae823c9ed0b0f3deda09648530b93d1a2a146d1dea9864".to_owned(),
             ]),
             limit: None,
+            search: None,
             tags: Some(HashMap::from([(
                 'p',
                 TagOperand::And(HashSet::from([
@@ -1055,6 +1060,7 @@ mod tests {
             until: None,
             authors: None,
             limit: None,
+            search: None,
             tags: Some(HashMap::from([('a', TagOperand::And(HashSet::new()))])),
             force_no_match: false,
         };

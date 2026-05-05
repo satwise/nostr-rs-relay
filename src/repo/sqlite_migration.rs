@@ -23,7 +23,7 @@ pragma mmap_size = 0; -- disable mmap (default)
 "##;
 
 /// Latest database version
-pub const DB_VERSION: usize = 18;
+pub const DB_VERSION: usize = 19;
 
 /// Schema definition
 const INIT_SQL: &str = formatcp!(
@@ -244,6 +244,9 @@ pub fn upgrade_db(conn: &mut PooledConnection) -> Result<usize> {
             }
             if curr_version == 17 {
                 curr_version = mig_17_to_18(conn)?;
+            }
+            if curr_version == 18 {
+                curr_version = mig_18_to_19(conn)?;
             }
 
             if curr_version == DB_VERSION {
@@ -838,4 +841,30 @@ PRAGMA user_version = 18;
         }
     }
     Ok(18)
+}
+
+fn mig_18_to_19(conn: &mut PooledConnection) -> Result<usize> {
+    info!("database schema needs update from 18->19");
+    let upgrade_sql = r##"
+-- NIP-50: Create FTS5 virtual table for full-text search
+CREATE VIRTUAL TABLE IF NOT EXISTS event_fts USING fts5(
+    content,
+    tokenize="unicode61 remove_diacritics 1"
+);
+-- Backfill from existing visible events (content column is serialized JSON;
+-- $.content extracts the human-readable note text)
+INSERT INTO event_fts(rowid, content)
+    SELECT e.id, json_extract(e.content, '$.content') FROM event e WHERE e.hidden IS NOT TRUE;
+PRAGMA user_version = 19;
+"##;
+    match conn.execute_batch(upgrade_sql) {
+        Ok(()) => {
+            info!("database schema upgraded v18 -> v19 (FTS5 NIP-50 full-text search)");
+        }
+        Err(err) => {
+            error!("update (v18->v19) failed: {}", err);
+            panic!("database could not be upgraded");
+        }
+    }
+    Ok(19)
 }

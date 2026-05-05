@@ -10,6 +10,7 @@ pub struct Info {
     pub relay_url: Option<String>,
     pub name: Option<String>,
     pub description: Option<String>,
+    pub software: Option<String>,
     pub pubkey: Option<String>,
     pub contact: Option<String>,
     pub favicon: Option<String>,
@@ -172,6 +173,19 @@ impl VerifiedUsers {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(unused)]
+pub struct Negentropy {
+    pub enabled: bool,
+    pub max_sync_events: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(unused)]
+pub struct Search {
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(unused)]
 pub struct Logging {
     pub folder_path: Option<String>,
     pub file_prefix: Option<String>,
@@ -192,6 +206,8 @@ pub struct Settings {
     pub retention: Retention,
     pub options: Options,
     pub logging: Logging,
+    pub negentropy: Negentropy,
+    pub search: Search,
 }
 
 impl Settings {
@@ -282,6 +298,7 @@ impl Default for Settings {
                 relay_url: None,
                 name: Some("Unnamed nostr-rs-relay".to_owned()),
                 description: None,
+                software: None,
                 pubkey: None,
                 contact: None,
                 favicon: None,
@@ -363,6 +380,11 @@ impl Default for Settings {
                 folder_path: None,
                 file_prefix: None,
             },
+            negentropy: Negentropy {
+                enabled: true,
+                max_sync_events: 500_000,
+            },
+            search: Search { enabled: true },
         }
     }
 }

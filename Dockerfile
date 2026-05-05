@@ -1,5 +1,8 @@
 FROM docker.io/library/rust:1-bookworm as builder
 ARG CARGO_LOG
+# JEMALLOC_SYS_WITH_LG_PAGE=14 compiles jemalloc with 16KB page support,
+# required for arm64 targets with 16KB page size (e.g. Raspberry Pi 5).
+ENV JEMALLOC_SYS_WITH_LG_PAGE=14
 RUN apt-get update \
     && apt-get install -y cmake protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
@@ -50,4 +53,4 @@ WORKDIR ${APP}
 ENV RUST_LOG=info,nostr_rs_relay=info
 ENV APP_DATA=${APP_DATA}
 
-CMD ./nostr-rs-relay --db ${APP_DATA}
+CMD ["/usr/src/app/nostr-rs-relay", "--db", "/usr/src/app/db"]

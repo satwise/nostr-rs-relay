@@ -10,6 +10,9 @@ name = "nostr-rs-relay"
 # Description
 description = "A newly created nostr-rs-relay.\n\nCustomize this with your own info."
 
+# Software/source URL advertised in NIP-11 metadata.
+#software = "https://github.com/satwise/byob-nostr-relay-v0.9.1-beta"
+
 # Administrative contact pubkey (32-byte hex, not npub)
 #pubkey = "0c2d168a4ae8ca58c9f1ab237b5df682599c6c7ab74307ea8b05684b60405d41"
 

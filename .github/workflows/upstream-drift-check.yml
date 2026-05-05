@@ -1,0 +1,79 @@
+name: Upstream drift check
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - master
+  schedule:
+    # Every Monday at 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add upstream and SourceHut remotes
+        run: |
+          git remote add upstream https://github.com/scsibug/nostr-rs-relay.git || true
+          git remote add sourcehut https://git.sr.ht/~gheartsfield/nostr-rs-relay || true
+          git fetch upstream --quiet
+          git fetch sourcehut --quiet 2>/dev/null || echo "SourceHut fetch failed (may be rate-limited or down)"
+
+      - name: Compute hashes
+        id: hashes
+        run: |
+          UPSTREAM_SHA=$(git rev-parse upstream/master)
+          echo "upstream_sha=$UPSTREAM_SHA" >> "$GITHUB_OUTPUT"
+          echo "Upstream (scsibug/GitHub):  $UPSTREAM_SHA"
+
+          SOURCEHUT_SHA=$(git ls-remote https://git.sr.ht/~gheartsfield/nostr-rs-relay HEAD 2>/dev/null | awk '{print $1}' || echo "unavailable")
+          echo "sourcehut_sha=$SOURCEHUT_SHA" >> "$GITHUB_OUTPUT"
+          echo "Upstream (gheartsfield/sr.ht): $SOURCEHUT_SHA"
+
+          FORK_BASE=$(git merge-base HEAD upstream/master)
+          echo "fork_base=$FORK_BASE" >> "$GITHUB_OUTPUT"
+          echo "Fork base (merge-base HEAD upstream/master): $FORK_BASE"
+
+          FORK_HEAD=$(git rev-parse HEAD)
+          echo "fork_head=$FORK_HEAD" >> "$GITHUB_OUTPUT"
+          echo "Fork HEAD: $FORK_HEAD"
+
+      - name: Check GitHub vs SourceHut parity
+        run: |
+          UPSTREAM="${{ steps.hashes.outputs.upstream_sha }}"
+          SRHT="${{ steps.hashes.outputs.sourcehut_sha }}"
+          if [[ "$SRHT" == "unavailable" ]]; then
+            echo "⚠️  SourceHut unavailable — skipping parity check"
+          elif [[ "$UPSTREAM" != "$SRHT" ]]; then
+            echo "⚠️  WARNING: GitHub upstream and SourceHut mirrors have DIVERGED"
+            echo "   GitHub  (scsibug):       $UPSTREAM"
+            echo "   SourceHut (gheartsfield): $SRHT"
+            echo "   Investigate before rebasing — do NOT assume either is authoritative."
+          else
+            echo "✅  GitHub upstream and SourceHut are in sync at $UPSTREAM"
+          fi
+
+      - name: Check fork is based on latest upstream
+        run: |
+          UPSTREAM="${{ steps.hashes.outputs.upstream_sha }}"
+          FORK_BASE="${{ steps.hashes.outputs.fork_base }}"
+          if [[ "$FORK_BASE" == "$UPSTREAM" ]]; then
+            echo "✅  Fork base matches upstream/master — no drift"
+          else
+            echo "❌  DRIFT DETECTED"
+            echo "   Fork base:        $FORK_BASE"
+            echo "   Upstream master:  $UPSTREAM"
+            echo ""
+            echo "Commits on upstream/master not in this branch:"
+            git --no-pager log "${FORK_BASE}..upstream/master" --oneline
+            echo ""
+            echo "Run: git fetch upstream && git rebase upstream/master"
+            exit 1
+          fi

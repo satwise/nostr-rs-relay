@@ -66,12 +66,23 @@ pub struct RelayInfo {
 /// Convert an Info configuration into public Relay Info
 impl From<Settings> for RelayInfo {
     fn from(c: Settings) -> Self {
-        let mut supported_nips = vec![1, 2, 9, 11, 12, 15, 16, 20, 22, 33, 40];
+        // NIP-44 (versioned encryption) is a client-side scheme with no relay requirements
+        let mut supported_nips = vec![1, 2, 9, 11, 12, 15, 16, 20, 22, 33, 40, 44];
 
         if c.authorization.nip42_auth {
             supported_nips.push(42);
-            supported_nips.sort();
+            // NIP-17 (private DMs) and NIP-59 (gift wrap) require AUTH to properly
+            // restrict kind:1059 delivery to p-tagged recipients
+            supported_nips.push(17);
+            supported_nips.push(59);
         }
+        if c.search.enabled {
+            supported_nips.push(50);
+        }
+        if c.negentropy.enabled {
+            supported_nips.push(77);
+        }
+        supported_nips.sort();
 
         let i = c.info;
         let p = c.pay_to_relay;
@@ -130,7 +141,10 @@ impl From<Settings> for RelayInfo {
             pubkey: i.pubkey,
             contact: i.contact,
             supported_nips: Some(supported_nips),
-            software: Some("https://git.sr.ht/~gheartsfield/nostr-rs-relay".to_owned()),
+            software: Some(
+                i.software
+                    .unwrap_or_else(|| "https://github.com/satwise/byob-nostr-relay-v0.9.1-beta".to_owned()),
+            ),
             version: CARGO_PKG_VERSION.map(std::borrow::ToOwned::to_owned),
             limitation: Some(limitations),
             payment_url,
