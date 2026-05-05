@@ -141,7 +141,10 @@ impl From<Settings> for RelayInfo {
             pubkey: i.pubkey,
             contact: i.contact,
             supported_nips: Some(supported_nips),
-            software: Some("https://git.sr.ht/~gheartsfield/nostr-rs-relay".to_owned()),
+            software: Some(
+                i.software
+                    .unwrap_or_else(|| "https://github.com/satwise/byob-nostr-relay-v0.9.1-beta".to_owned()),
+            ),
             version: CARGO_PKG_VERSION.map(std::borrow::ToOwned::to_owned),
             limitation: Some(limitations),
             payment_url,
