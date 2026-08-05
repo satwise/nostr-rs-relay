@@ -87,9 +87,11 @@ impl Serialize for ReqFilter {
         }
         if let Some(authors) = &self.authors {
             map.serialize_entry("authors", &authors)?;
-        }        if let Some(search) = &self.search {
-            map.serialize_entry("search", search)?
-        }        // serialize tags
+        }
+        if let Some(search) = &self.search {
+            map.serialize_entry("search", search)?;
+        }
+        // serialize tags
         if let Some(tags) = &self.tags {
             for (k, v) in tags {
                 map.serialize_entry(&format!("#{k}"), v)?;
