@@ -1534,7 +1534,8 @@ async fn nostr_server(
                                 };
                                 // Query DB for matching events
                                 let (neg_query_tx, mut neg_query_rx) = mpsc::channel::<db::QueryResult>(20_000);
-                                let (_neg_abandon_tx, neg_abandon_rx) = oneshot::channel::<()>();
+                                let (neg_abandon_tx, neg_abandon_rx) = oneshot::channel::<()>();
+                                drop(neg_abandon_tx);
                                 if let Err(e) = repo.query_subscription(neg_sub, cid.clone(), neg_query_tx, neg_abandon_rx).await {
                                     warn!("negentropy query error: {:?} (cid: {})", e, cid);
                                     let err_msg = crate::negentropy::make_neg_err(&sub_id, "CLOSED: query error");
