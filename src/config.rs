@@ -381,7 +381,7 @@ impl Default for Settings {
                 file_prefix: None,
             },
             negentropy: Negentropy {
-                enabled: true,
+                enabled: false,
                 max_sync_events: 500_000,
             },
             search: Search { enabled: true },
