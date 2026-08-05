@@ -224,7 +224,7 @@ limit_scrapers = false
 # LNBits api secret
 #api_secret = "<ln bits api>"
 
-# Path to CLN rune
+# Path to Core Lightning (CLN) rune
 #rune_path = "<rune path>"
 
 # Nostr direct message on signup

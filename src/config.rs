@@ -100,7 +100,7 @@ pub struct PayToRelay {
     pub direct_message: bool, // Send direct message to user with invoice and terms
     pub secret_key: Option<String>,
     pub processor: Processor,
-    pub rune_path: Option<String>, // To access clightning API
+    pub rune_path: Option<String>, // To access Core Lightning API
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
