@@ -26,6 +26,12 @@ pragma mmap_size = 0; -- disable mmap (default)
 pub const DB_VERSION: usize = 19;
 
 /// Schema definition
+///
+/// NOTE: When `DB_VERSION` is bumped, `INIT_SQL` must create every schema object
+/// present after running all migrations. In particular, the version 19 schema must
+/// include the `event_fts` virtual table added by `mig_18_to_19` (and the same
+/// initial backfill, if any) so fresh databases created at `user_version == 19`
+/// match upgraded databases.
 const INIT_SQL: &str = formatcp!(
     r##"
 -- Database settings
