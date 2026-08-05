@@ -1016,19 +1016,43 @@ pub enum NostrMessage {
     SubMsg(Subscription),
     /// A `CLOSE` message
     CloseMsg(CloseCmd),
-    /// NIP-77 negentropy messages (parsed manually, not via serde)
-    #[serde(skip)]
-    NegMsg(crate::negentropy::NegMessage),
 }
 
-/// Convert Message to `NostrMessage`
-fn convert_to_msg(msg: &str, max_bytes: Option<usize>) -> Result<NostrMessage> {
+/// Any message a client can send: either a standard nostr message
+/// (handled by serde) or a NIP-77 negentropy message (parsed manually).
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum ClientMessage {
+    /// A standard nostr protocol message
+    Nostr(NostrMessage),
+    /// NIP-77 negentropy message
+    Neg(NegMessage),
+}
+
+/// Cheap check for whether a raw message looks like a NIP-77 command,
+/// avoiding a full JSON parse for the common (non-negentropy) case.
+fn is_neg_command(msg: &str) -> bool {
+    let rest = msg.trim_start();
+    let Some(rest) = rest.strip_prefix('[') else {
+        return false;
+    };
+    let rest = rest.trim_start();
+    let Some(rest) = rest.strip_prefix('"') else {
+        return false;
+    };
+    rest.starts_with("NEG-")
+}
+
+/// Convert Message to `ClientMessage`
+fn convert_to_msg(msg: &str, max_bytes: Option<usize>) -> Result<ClientMessage> {
     // Try NIP-77 negentropy messages before serde: NEG-CLOSE parses as CloseCmd
     // (cmd="NEG-CLOSE") via serde and would be silently dropped as "invalid command".
-    if msg.contains("\"NEG-") {
-        if let Some(neg_msg) = crate::negentropy::parse_neg_message(msg) {
-            return Ok(NostrMessage::NegMsg(neg_msg));
-        }
+    if is_neg_command(msg) {
+        return crate::negentropy::parse_neg_message(msg)
+            .map(ClientMessage::Neg)
+            .ok_or_else(|| {
+                trace!("negentropy parse error on message: {:?}", msg.trim());
+                Error::ProtoParseError
+            });
     }
     let parsed_res: Result<NostrMessage> =
         serde_json::from_str(msg).map_err(std::convert::Into::into);
@@ -1046,13 +1070,9 @@ fn convert_to_msg(msg: &str, max_bytes: Option<usize>) -> Result<NostrMessage> {
                     }
                 }
             }
-            Ok(m)
+            Ok(ClientMessage::Nostr(m))
         }
         Err(e) => {
-            // Try NIP-77 negentropy messages before giving up
-            if let Some(neg_msg) = crate::negentropy::parse_neg_message(msg) {
-                return Ok(NostrMessage::NegMsg(neg_msg));
-            }
             trace!("proto parse error: {:?}", e);
             trace!("parse error on message: {:?}", msg.trim());
             Err(Error::ProtoParseError)
@@ -1332,7 +1352,7 @@ async fn nostr_server(
 
                 // convert ws_next into proto_next
                 match nostr_msg {
-                    Ok(NostrMessage::EventMsg(ec)) => {
+                    Ok(ClientMessage::Nostr(NostrMessage::EventMsg(ec))) => {
                         // An EventCmd needs to be validated to be converted into an Event
                         // handle each type of message
                         let evid = ec.event_id().to_owned();
@@ -1433,7 +1453,7 @@ async fn nostr_server(
                             }
                         }
                     },
-                    Ok(NostrMessage::SubMsg(s)) => {
+                    Ok(ClientMessage::Nostr(NostrMessage::SubMsg(s))) => {
                         debug!("subscription requested (cid: {}, sub: {:?})", cid, s.id);
                         // subscription handling consists of:
                         // * check for rate limits
@@ -1481,7 +1501,7 @@ async fn nostr_server(
                             }
                         }
                     },
-                    Ok(NostrMessage::CloseMsg(cc)) => {
+                    Ok(ClientMessage::Nostr(NostrMessage::CloseMsg(cc))) => {
                         // closing a request simply removes the subscription.
                         let parsed : Result<Close> = Result::<Close>::from(cc);
                         if let Ok(c) = parsed {
@@ -1504,7 +1524,7 @@ async fn nostr_server(
                             }
                         }
                     },
-                    Ok(NostrMessage::NegMsg(neg)) => {
+                    Ok(ClientMessage::Neg(neg)) => {
                         match neg {
                             NegMessage::Open { sub_id, filter, msg_hex } => {
                                 // Check if negentropy is enabled
