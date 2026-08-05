@@ -17,6 +17,7 @@ use r2d2;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::params;
 use rusqlite::types::ToSql;
+use rusqlite::ErrorCode;
 use rusqlite::OpenFlags;
 use std::fmt::Write as _;
 use std::path::Path;
@@ -149,6 +150,24 @@ impl SqliteRepo {
         }
         // remember primary key of the event most recently inserted.
         let ev_id = tx.last_insert_rowid();
+        // insert into full-text search index for NIP-50 when the FTS table
+        // is available. This keeps normal event writes working on databases
+        // that were initialized without FTS support or without the virtual
+        // table being created.
+        let event_fts_available = tx
+            .query_row(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_fts' LIMIT 1;",
+                params![],
+                |row| row.get::<usize, i64>(0),
+            )
+            .ok()
+            .is_some();
+        if event_fts_available {
+            tx.execute(
+                "INSERT INTO event_fts(rowid, content) VALUES (?1, ?2)",
+                params![ev_id, e.content],
+            )?;
+        }
         // add all tags to the tag table
         for tag in &e.tags {
             // ensure we have 2 values.
@@ -288,15 +307,30 @@ impl NostrRepo for SqliteRepo {
                 attempts += 1;
                 let wr = SqliteRepo::persist_event(&mut conn, &e);
                 match wr {
-                    Err(SqlError(rusqlite::Error::SqliteFailure(e, _))) => {
-                        // this basically means that NIP-05 or another
-                        // writer was using the database between us
-                        // reading and promoting the connection to a
-                        // write lock.
-                        info!(
-                            "event write failed, DB locked (attempt: {}); sqlite err: {}",
-                            attempts, e.extended_code
-                        );
+                    Err(SqlError(rusqlite::Error::SqliteFailure(sqlite_error, _))) => {
+                        match sqlite_error.code {
+                            ErrorCode::DatabaseBusy | ErrorCode::DatabaseLocked => {
+                                // this basically means that NIP-05 or another
+                                // writer was using the database between us
+                                // reading and promoting the connection to a
+                                // write lock.
+                                info!(
+                                    "event write failed, DB locked (attempt: {}); sqlite err: {}",
+                                    attempts, sqlite_error.extended_code
+                                );
+                            }
+                            ErrorCode::ConstraintViolation => {
+                                trace!(
+                                    "ignoring duplicate/constraint event write for event {:?}; sqlite err: {}",
+                                    e.get_event_id_prefix(),
+                                    sqlite_error.extended_code
+                                );
+                                return Ok(0);
+                            }
+                            _ => {
+                                return wr;
+                            }
+                        }
                     }
                     _ => {
                         return wr;
@@ -1136,6 +1170,12 @@ fn query_from_filter(f: &ReqFilter) -> (String, Vec<Box<dyn ToSql>>, Option<Stri
         let until_clause = format!("created_at <= {}", f.until.unwrap());
         filter_components.push(until_clause);
     }
+    // NIP-50: full-text search
+    if let Some(ref search_term) = f.search {
+        filter_components
+            .push("e.id IN (SELECT rowid FROM event_fts WHERE event_fts MATCH ?)".to_string());
+        params.push(Box::new(search_term.clone()));
+    }
     // never display hidden events
     query.push_str(" WHERE hidden!=TRUE");
     // never display hidden events
@@ -1428,6 +1468,7 @@ mod tests {
                 "84de35e2584d2b144aae823c9ed0b0f3deda09648530b93d1a2a146d1dea9864".to_owned(),
             ]),
             limit: None,
+            search: None,
             tags: Some(HashMap::from([(
                 'd',
                 TagOperand::Or(HashSet::from(["test".to_owned()])),
@@ -1451,6 +1492,7 @@ mod tests {
             until: None,
             authors: None,
             limit: None,
+            search: None,
             tags: Some(HashMap::from([(
                 'd',
                 TagOperand::Or(HashSet::from(["test".to_owned(), "test2".to_owned()])),
@@ -1477,6 +1519,7 @@ mod tests {
                 "84de35e2584d2b144aae823c9ed0b0f3deda09648530b93d1a2a146d1dea9864".to_owned(),
             ]),
             limit: None,
+            search: None,
             tags: Some(HashMap::from([(
                 'd',
                 TagOperand::And(HashSet::from(["test".to_owned(), "test2".to_owned()])),
@@ -1512,6 +1555,7 @@ mod tests {
                 "84de35e2584d2b144aae823c9ed0b0f3deda09648530b93d1a2a146d1dea9864".to_owned(),
             ]),
             limit: None,
+            search: None,
             tags: Some(HashMap::from([(
                 'p',
                 TagOperand::And(HashSet::from([
@@ -1547,6 +1591,7 @@ mod tests {
             until: None,
             authors: None,
             limit: None,
+            search: None,
             tags: Some(HashMap::from([('a', TagOperand::And(HashSet::new()))])),
             force_no_match: false,
         };
@@ -1569,6 +1614,7 @@ mod tests {
             until: Some(9876543210),
             authors: None,
             limit: None,
+            search: None,
             tags: Some(HashMap::from([(
                 'd',
                 TagOperand::Or(HashSet::from(["test".to_owned()])),
@@ -1594,6 +1640,7 @@ mod tests {
             until: None,
             authors: None,
             limit: None,
+            search: None,
             tags: Some(HashMap::from([
                 ('d', TagOperand::Or(HashSet::from(["test".to_owned()]))),
                 ('e', TagOperand::Or(HashSet::from(["event1".to_owned()]))),
