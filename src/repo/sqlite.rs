@@ -150,11 +150,24 @@ impl SqliteRepo {
         }
         // remember primary key of the event most recently inserted.
         let ev_id = tx.last_insert_rowid();
-        // insert into full-text search index for NIP-50
-        tx.execute(
-            "INSERT INTO event_fts(rowid, content) VALUES (?1, ?2)",
-            params![ev_id, e.content],
-        )?;
+        // insert into full-text search index for NIP-50 when the FTS table
+        // is available. This keeps normal event writes working on databases
+        // that were initialized without FTS support or without the virtual
+        // table being created.
+        let event_fts_available = tx
+            .query_row(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_fts' LIMIT 1;",
+                params![],
+                |row| row.get::<usize, i64>(0),
+            )
+            .ok()
+            .is_some();
+        if event_fts_available {
+            tx.execute(
+                "INSERT INTO event_fts(rowid, content) VALUES (?1, ?2)",
+                params![ev_id, e.content],
+            )?;
+        }
         // add all tags to the tag table
         for tag in &e.tags {
             // ensure we have 2 values.
