@@ -3,9 +3,9 @@ name: Build and push Docker image
 on:
   push:
     branches:
-      - 'feat/nip50-nip77'
+      - "feat/nip50-nip77"
     tags:
-      - 'v*'
+      - "v*"
 
 env:
   REGISTRY: ghcr.io

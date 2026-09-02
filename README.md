@@ -1,8 +1,8 @@
 # [nostr-rs-relay](https://git.sr.ht/~gheartsfield/nostr-rs-relay)
 
 This is a [nostr](https://github.com/nostr-protocol/nostr) relay,
-written in Rust.  It currently supports the entire relay protocol, and
-persists data with SQLite.  There is experimental support for
+written in Rust. It currently supports the entire relay protocol, and
+persists data with SQLite. There is experimental support for
 Postgresql.
 
 The project master repository is available on
@@ -20,15 +20,14 @@ mirrored on [GitHub](https://github.com/scsibug/nostr-rs-relay).
 - Non-Umbrel deployment/app runbook: <https://github.com/satwise/nostrrelay/blob/main/ARCHITECTURE-RUNBOOK.md>
 - Organization: <https://github.com/satwise>
 
-
 ## Features
 
 [NIPs](https://github.com/nostr-protocol/nips) with a relay-specific implementation are listed here.
 
 - [x] NIP-01: [Basic protocol flow description](https://github.com/nostr-protocol/nips/blob/master/01.md)
-  * Core event model
-  * Hide old metadata events
-  * Id/Author prefix search
+  - Core event model
+  - Hide old metadata events
+  - Id/Author prefix search
 - [x] NIP-02: [Contact List and Petnames](https://github.com/nostr-protocol/nips/blob/master/02.md)
 - [ ] NIP-03: [OpenTimestamps Attestations for Events](https://github.com/nostr-protocol/nips/blob/master/03.md)
 - [x] NIP-05: [Mapping Nostr keys to DNS-based internet identifiers](https://github.com/nostr-protocol/nips/blob/master/05.md)
@@ -43,13 +42,19 @@ mirrored on [GitHub](https://github.com/scsibug/nostr-rs-relay).
 - [x] NIP-28: [Public Chat](https://github.com/nostr-protocol/nips/blob/master/28.md)
 - [x] NIP-33: [Parameterized Replaceable Events](https://github.com/nostr-protocol/nips/blob/master/33.md)
 - [x] NIP-40: [Expiration Timestamp](https://github.com/nostr-protocol/nips/blob/master/40.md)
-- [x] NIP-42: [Authentication of clients to relays](https://github.com/nostr-protocol/nips/blob/master/42.md)
+- [x] NIP-42: [Authentication of clients to relays](https://github.com/nostr-protocol/nips/blob/master/42.md) (_advertised when `authorization.nip42_auth = true`_)
+- [x] NIP-44: [Versioned Encryption](https://github.com/nostr-protocol/nips/blob/master/44.md) (_advertised for client compatibility; encryption remains client-side_)
+- [x] NIP-50: [Search Capability](https://github.com/nostr-protocol/nips/blob/master/50.md) (_fork feature; advertised when `search.enabled = true`, enabled by default_)
+- [x] NIP-59: [Gift Wrap](https://github.com/nostr-protocol/nips/blob/master/59.md) (_advertised when `authorization.nip42_auth = true`_)
+- [x] NIP-77: [Negentropy Syncing](https://github.com/nostr-protocol/nips/blob/master/77.md) (_fork feature; advertised when `negentropy.enabled = true`, enabled by default_)
 - [x] NIP-91: [AND operator for filters](https://github.com/nostr-protocol/nips/pull/1365)
+
+Fork note: when `authorization.nip42_auth = true`, the relay also advertises NIP-17 private direct messages because authenticated delivery restrictions become enforceable.
 
 ## Quick Start
 
 The provided `Dockerfile` will compile and build the server
-application.  Use a bind mount to store the SQLite database outside of
+application. Use a bind mount to store the SQLite database outside of
 the container image, and map the container's 8080 port to a host port
 (7000 in the example below).
 
@@ -102,11 +107,13 @@ https://hub.docker.com/r/scsibug/nostr-rs-relay
 Building `nostr-rs-relay` requires an installation of Cargo & Rust: https://www.rust-lang.org/tools/install
 
 The following OS packages will be helpful; on Debian/Ubuntu:
+
 ```console
 $ sudo apt-get install build-essential cmake protobuf-compiler pkg-config libssl-dev
 ```
 
 On OpenBSD:
+
 ```console
 $ doas pkg_add rust protobuf
 ```
@@ -120,7 +127,7 @@ $ cargo build -q -r
 ```
 
 The relay executable is now located in
-`target/release/nostr-rs-relay`.  In order to run it with logging
+`target/release/nostr-rs-relay`. In order to run it with logging
 enabled, execute it with the `RUST_LOG` variable set:
 
 ```console
@@ -136,13 +143,13 @@ Dec 26 10:31:56.467  INFO nostr_rs_relay::server: control message listener start
 Dec 26 10:31:56.468  INFO nostr_rs_relay::db: Built a connection pool "client query" (min=4, max=8)
 ```
 
-You now have a running relay, on port `8080`.  Use a `nostr` client or
+You now have a running relay, on port `8080`. Use a `nostr` client or
 `websocat` to connect and send/query for events.
 
 ## Configuration
 
 The sample [`config.toml`](config.toml) file demonstrates the
-configuration available to the relay.  This file is optional, but may
+configuration available to the relay. This file is optional, but may
 be mounted into a docker container like so:
 
 ```console
@@ -167,11 +174,10 @@ Proxy](docs/reverse-proxy.md).
 For development discussions, please feel free to use the [sourcehut
 mailing list](https://lists.sr.ht/~gheartsfield/nostr-rs-relay-devel).
 
-License
----
+## License
+
 This project is MIT licensed.
 
-External Documentation and Links
----
+## External Documentation and Links
 
-* [BlockChainCaffe's Nostr Relay Setup Guide](https://github.com/BlockChainCaffe/Nostr-Relay-Setup-Guide)
+- [BlockChainCaffe's Nostr Relay Setup Guide](https://github.com/BlockChainCaffe/Nostr-Relay-Setup-Guide)

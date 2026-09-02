@@ -17,6 +17,7 @@ use r2d2;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::params;
 use rusqlite::types::ToSql;
+use rusqlite::ErrorCode;
 use rusqlite::OpenFlags;
 use std::fmt::Write as _;
 use std::path::Path;
@@ -293,15 +294,30 @@ impl NostrRepo for SqliteRepo {
                 attempts += 1;
                 let wr = SqliteRepo::persist_event(&mut conn, &e);
                 match wr {
-                    Err(SqlError(rusqlite::Error::SqliteFailure(e, _))) => {
-                        // this basically means that NIP-05 or another
-                        // writer was using the database between us
-                        // reading and promoting the connection to a
-                        // write lock.
-                        info!(
-                            "event write failed, DB locked (attempt: {}); sqlite err: {}",
-                            attempts, e.extended_code
-                        );
+                    Err(SqlError(rusqlite::Error::SqliteFailure(sqlite_error, _))) => {
+                        match sqlite_error.code {
+                            ErrorCode::DatabaseBusy | ErrorCode::DatabaseLocked => {
+                                // this basically means that NIP-05 or another
+                                // writer was using the database between us
+                                // reading and promoting the connection to a
+                                // write lock.
+                                info!(
+                                    "event write failed, DB locked (attempt: {}); sqlite err: {}",
+                                    attempts, sqlite_error.extended_code
+                                );
+                            }
+                            ErrorCode::ConstraintViolation => {
+                                trace!(
+                                    "ignoring duplicate/constraint event write for event {:?}; sqlite err: {}",
+                                    e.get_event_id_prefix(),
+                                    sqlite_error.extended_code
+                                );
+                                return Ok(0);
+                            }
+                            _ => {
+                                return wr;
+                            }
+                        }
                     }
                     _ => {
                         return wr;

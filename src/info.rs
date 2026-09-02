@@ -66,8 +66,11 @@ pub struct RelayInfo {
 /// Convert an Info configuration into public Relay Info
 impl From<Settings> for RelayInfo {
     fn from(c: Settings) -> Self {
-        // NIP-44 (versioned encryption) is a client-side scheme with no relay requirements
-        let mut supported_nips = vec![1, 2, 9, 11, 12, 15, 16, 20, 22, 33, 40, 44];
+        // Expansive NIP-11 advertisement for the satwise fork: include implemented
+        // relay behavior plus fork-specific capabilities that clients can rely on.
+        // NIP-44 remains advertised for compatibility with clients expecting the fork's
+        // published support surface, even though encryption is client-side.
+        let mut supported_nips = vec![1, 2, 5, 9, 11, 12, 15, 16, 20, 22, 28, 33, 40, 44, 91];
 
         if c.authorization.nip42_auth {
             supported_nips.push(42);

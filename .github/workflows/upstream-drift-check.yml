@@ -3,11 +3,11 @@ name: Upstream drift check
 on:
   push:
     branches:
-      - 'feat/**'
+      - "feat/**"
       - master
   schedule:
     # Every Monday at 09:00 UTC
-    - cron: '0 9 * * 1'
+    - cron: "0 9 * * 1"
   workflow_dispatch:
 
 jobs:
